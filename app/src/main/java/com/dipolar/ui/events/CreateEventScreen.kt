@@ -2,6 +2,7 @@ package com.dipolar.ui.events
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,7 @@ fun CreateEventScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    var isDateMeeting by remember { mutableStateOf(false) }
     var maxParticipants by remember { mutableStateOf(4) }
     var selectedInterests by remember { mutableStateOf<Set<Interest>>(emptySet()) }
     var selectedLanguage by remember { mutableStateOf(Language.TURKISH) }
@@ -40,6 +42,11 @@ fun CreateEventScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showLanguageMenu by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+
+    // Buluşma seçilince kapasite 2'ye kilitlenir; iptal edilince minimum 3'e çıkar
+    LaunchedEffect(isDateMeeting) {
+        maxParticipants = if (isDateMeeting) 2 else 3
+    }
 
     val datePickerState = rememberDatePickerState()
 
@@ -254,13 +261,105 @@ fun CreateEventScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Meeting type toggle
+            FormLabel("Etkinlik Türü")
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Grup etkinliği
+                val groupSelected = !isDateMeeting
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (groupSelected) NavyBlue else CardWhite)
+                        .border(
+                            1.dp,
+                            if (groupSelected) NavyBlue else Color(0xFFE0E0E0),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable { isDateMeeting = false }
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Groups,
+                            null,
+                            tint = if (groupSelected) Color.White else TextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            "Grup Etkinliği",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (groupSelected) Color.White else TextSecondary
+                        )
+                        Text(
+                            "Min. 3 kişi",
+                            fontSize = 11.sp,
+                            color = if (groupSelected) Color.White.copy(alpha = 0.7f) else TextSecondary.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                // Buluşma (date)
+                val dateSelected = isDateMeeting
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (dateSelected) NavyBlue else CardWhite)
+                        .border(
+                            1.dp,
+                            if (dateSelected) NavyBlue else Color(0xFFE0E0E0),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable { isDateMeeting = true }
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            null,
+                            tint = if (dateSelected) Color.White else TextSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            "Buluşma",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (dateSelected) Color.White else TextSecondary
+                        )
+                        Text(
+                            "2 kişi (1-on-1)",
+                            fontSize = 11.sp,
+                            color = if (dateSelected) Color.White.copy(alpha = 0.7f) else TextSecondary.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             // Capacity
             FormLabel("Kapasite")
             Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDateMeeting) LightBlueBackground else CardWhite
+                ),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Row(
@@ -269,28 +368,41 @@ fun CreateEventScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
-                        onClick = { if (maxParticipants > 2) maxParticipants-- },
+                        onClick = {
+                            if (!isDateMeeting && maxParticipants > 3) maxParticipants--
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(LightBlueBackground)
+                            .background(if (isDateMeeting) Color(0xFFDDE5FF) else LightBlueBackground),
+                        enabled = !isDateMeeting && maxParticipants > 3
                     ) {
-                        Icon(Icons.Default.Remove, null, tint = NavyBlue)
+                        Icon(Icons.Default.Remove, null, tint = if (isDateMeeting) TextSecondary else NavyBlue)
                     }
-                    Text(
-                        "$maxParticipants",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "$maxParticipants",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        if (isDateMeeting) {
+                            Text("Kilitli • Buluşma", fontSize = 11.sp, color = NavyBlue)
+                        }
+                    }
+
                     IconButton(
-                        onClick = { if (maxParticipants < 50) maxParticipants++ },
+                        onClick = {
+                            if (!isDateMeeting && maxParticipants < 50) maxParticipants++
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(LightBlueBackground)
+                            .background(if (isDateMeeting) Color(0xFFDDE5FF) else LightBlueBackground),
+                        enabled = !isDateMeeting && maxParticipants < 50
                     ) {
-                        Icon(Icons.Default.Add, null, tint = NavyBlue)
+                        Icon(Icons.Default.Add, null, tint = if (isDateMeeting) TextSecondary else NavyBlue)
                     }
                 }
             }
