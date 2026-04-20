@@ -28,7 +28,7 @@ import com.dipolar.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CreateEventScreen(
-    onCreateEvent: (String, String, String, String, Int, List<Interest>, Language) -> Unit,
+    onCreateEvent: (String, String, String, String, Int, List<Interest>, Language, Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
@@ -439,7 +439,7 @@ fun CreateEventScreen(
                         location.isBlank() -> errorMessage = "Konum gerekli"
                         selectedDate.isEmpty() -> errorMessage = "Lütfen bir tarih seçin"
                         selectedInterests.isEmpty() -> errorMessage = "En az bir ilgi alanı seçin"
-                        else -> onCreateEvent(title, description, selectedDate, location, maxParticipants, selectedInterests.toList(), selectedLanguage)
+                        else -> onCreateEvent(title, description, selectedDate, location, maxParticipants, selectedInterests.toList(), selectedLanguage, isDateMeeting)
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),

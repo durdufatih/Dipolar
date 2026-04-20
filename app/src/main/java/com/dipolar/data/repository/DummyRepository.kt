@@ -154,6 +154,88 @@ class DummyRepository @Inject constructor() {
                 currentParticipants = 4,
                 interests = listOf(Interest.BOOKS, Interest.ART),
                 language = Language.TURKISH,
+                isDateMeeting = false,
+                joinRequests = emptyList()
+            ),
+            // 1-on-1 Buluşmalar
+            Event(
+                id = "d1",
+                title = "Kahve Eşliğinde Müzik Sohbeti",
+                description = "Müziği seven biriyle sakin bir kafede buluşup favori albümleri konuşmak istiyorum.",
+                creatorId = "u1",
+                creatorName = "Ayşe Kara",
+                creatorAvatarUrl = "https://i.pravatar.cc/150?img=1",
+                date = "2026-05-11",
+                location = "Şişli, İstanbul",
+                maxParticipants = 2,
+                currentParticipants = 1,
+                interests = listOf(Interest.MUSIC, Interest.FOOD),
+                language = Language.TURKISH,
+                isDateMeeting = true,
+                joinRequests = emptyList()
+            ),
+            Event(
+                id = "d2",
+                title = "Yürüyüş & Tech Konuşması",
+                description = "Boğaz'da yürürken yapay zeka ve yazılım trendlerini konuşalım.",
+                creatorId = "u2",
+                creatorName = "Mehmet Yılmaz",
+                creatorAvatarUrl = "https://i.pravatar.cc/150?img=12",
+                date = "2026-05-13",
+                location = "Ortaköy, İstanbul",
+                maxParticipants = 2,
+                currentParticipants = 1,
+                interests = listOf(Interest.TECHNOLOGY, Interest.SPORTS),
+                language = Language.ENGLISH,
+                isDateMeeting = true,
+                joinRequests = emptyList()
+            ),
+            Event(
+                id = "d3",
+                title = "Fotoğraf & Doğa Gezisi",
+                description = "Birlikte çekime çıkalım. Başlangıç seviyesi tamam, ekipman fark etmez!",
+                creatorId = "u3",
+                creatorName = "Zeynep Demir",
+                creatorAvatarUrl = "https://i.pravatar.cc/150?img=5",
+                date = "2026-05-16",
+                location = "Polonezköy, İstanbul",
+                maxParticipants = 2,
+                currentParticipants = 1,
+                interests = listOf(Interest.PHOTOGRAPHY, Interest.NATURE),
+                language = Language.TURKISH,
+                isDateMeeting = true,
+                joinRequests = emptyList()
+            ),
+            Event(
+                id = "d4",
+                title = "Film İzleme & Tartışma",
+                description = "Klasik bir film seçip birlikte izleyelim, sonra yorumlayalım.",
+                creatorId = "u4",
+                creatorName = "Can Arslan",
+                creatorAvatarUrl = "https://i.pravatar.cc/150?img=15",
+                date = "2026-05-18",
+                location = "Beşiktaş, İstanbul",
+                maxParticipants = 2,
+                currentParticipants = 1,
+                interests = listOf(Interest.CINEMA, Interest.BOOKS),
+                language = Language.TURKISH,
+                isDateMeeting = true,
+                joinRequests = emptyList()
+            ),
+            Event(
+                id = "d5",
+                title = "Sabah Koşusu Partneri",
+                description = "Her sabah 7'de Maçka'dan koşuyorum, bir partner arıyorum!",
+                creatorId = "u5",
+                creatorName = "Elif Şahin",
+                creatorAvatarUrl = "https://i.pravatar.cc/150?img=9",
+                date = "2026-05-21",
+                location = "Maçka Parkı, İstanbul",
+                maxParticipants = 2,
+                currentParticipants = 1,
+                interests = listOf(Interest.FITNESS, Interest.SPORTS),
+                language = Language.TURKISH,
+                isDateMeeting = true,
                 joinRequests = emptyList()
             )
         )
@@ -208,6 +290,7 @@ class DummyRepository @Inject constructor() {
         maxParticipants: Int,
         interests: List<Interest>,
         language: Language,
+        isDateMeeting: Boolean,
         creatorId: String,
         creatorName: String,
         creatorAvatarUrl: String
@@ -225,6 +308,7 @@ class DummyRepository @Inject constructor() {
             currentParticipants = 1,
             interests = interests,
             language = language,
+            isDateMeeting = isDateMeeting,
             joinRequests = emptyList()
         )
         _events.update { list -> (list + newEvent).toMutableList() }

@@ -70,6 +70,7 @@ data class Event(
     val currentParticipants: Int,
     val interests: List<Interest>,
     val language: Language,
+    val isDateMeeting: Boolean = false,
     val joinRequests: List<JoinRequest> = emptyList()
 ) : Parcelable {
     val isFull: Boolean get() = currentParticipants >= maxParticipants

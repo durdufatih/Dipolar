@@ -124,8 +124,8 @@ fun DipolarNavHost() {
         composable(Screen.CreateEvent.route) {
             val vm: EventViewModel = hiltViewModel()
             CreateEventScreen(
-                onCreateEvent = { title, desc, date, loc, max, interests, lang ->
-                    vm.createEvent(title, desc, date, loc, max, interests, lang)
+                onCreateEvent = { title, desc, date, loc, max, interests, lang, isDate ->
+                    vm.createEvent(title, desc, date, loc, max, interests, lang, isDate)
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() }
@@ -146,6 +146,7 @@ fun MainScreen(
 
     val currentUser by eventVm.currentUser.collectAsState()
     val filteredEvents by eventVm.filteredEvents.collectAsState()
+    val dateMeetings by eventVm.dateMeetings.collectAsState()
     val myEvents by eventVm.myEvents.collectAsState()
     val selectedInterests by eventVm.selectedInterestFilter.collectAsState()
     val selectedLanguage by eventVm.selectedLanguageFilter.collectAsState()
@@ -195,6 +196,7 @@ fun MainScreen(
             composable("tab_events") {
                 EventListScreen(
                     events = filteredEvents,
+                    dateMeetings = dateMeetings,
                     currentUser = currentUser,
                     selectedInterests = selectedInterests,
                     selectedLanguage = selectedLanguage,

@@ -28,6 +28,21 @@ class EventViewModel @Inject constructor(
         _selectedLanguageFilter
     ) { events, interestFilter, languageFilter ->
         events.filter { event ->
+            if (event.isDateMeeting) return@filter false
+            val interestMatch = interestFilter.isEmpty() ||
+                    event.interests.any { it in interestFilter }
+            val languageMatch = languageFilter == null || event.language == languageFilter
+            interestMatch && languageMatch
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val dateMeetings: StateFlow<List<Event>> = combine(
+        repository.events,
+        _selectedInterestFilter,
+        _selectedLanguageFilter
+    ) { events, interestFilter, languageFilter ->
+        events.filter { event ->
+            if (!event.isDateMeeting) return@filter false
             val interestMatch = interestFilter.isEmpty() ||
                     event.interests.any { it in interestFilter }
             val languageMatch = languageFilter == null || event.language == languageFilter
@@ -75,7 +90,8 @@ class EventViewModel @Inject constructor(
         location: String,
         maxParticipants: Int,
         interests: List<Interest>,
-        language: Language
+        language: Language,
+        isDateMeeting: Boolean = false
     ) {
         val user = repository.currentUser.value ?: return
         viewModelScope.launch {
@@ -87,6 +103,7 @@ class EventViewModel @Inject constructor(
                 maxParticipants = maxParticipants,
                 interests = interests,
                 language = language,
+                isDateMeeting = isDateMeeting,
                 creatorId = user.id,
                 creatorName = user.name,
                 creatorAvatarUrl = user.avatarUrl
