@@ -146,10 +146,11 @@ fun MainScreen(
 
     val currentUser by eventVm.currentUser.collectAsState()
     val filteredEvents by eventVm.filteredEvents.collectAsState()
-    val dateMeetings by eventVm.dateMeetings.collectAsState()
     val myEvents by eventVm.myEvents.collectAsState()
     val selectedInterests by eventVm.selectedInterestFilter.collectAsState()
     val selectedLanguage by eventVm.selectedLanguageFilter.collectAsState()
+    val meetingTypeFilter by eventVm.meetingTypeFilter.collectAsState()
+    val hasActiveFilters by eventVm.hasActiveFilters.collectAsState()
     val pendingEvents by eventVm.pendingRequestEvents.collectAsState()
 
     val entry by bottomNav.currentBackStackEntryAsState()
@@ -196,12 +197,14 @@ fun MainScreen(
             composable("tab_events") {
                 EventListScreen(
                     events = filteredEvents,
-                    dateMeetings = dateMeetings,
                     currentUser = currentUser,
                     selectedInterests = selectedInterests,
                     selectedLanguage = selectedLanguage,
+                    meetingTypeFilter = meetingTypeFilter,
+                    hasActiveFilters = hasActiveFilters,
                     onToggleInterest = eventVm::toggleInterestFilter,
                     onLanguageFilter = eventVm::setLanguageFilter,
+                    onMeetingTypeFilter = eventVm::setMeetingTypeFilter,
                     onClearFilters = eventVm::clearFilters,
                     onEventClick = { onNavigateToEventDetail(it.id) },
                     onCreateEvent = onNavigateToCreateEvent

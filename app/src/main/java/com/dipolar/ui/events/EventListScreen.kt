@@ -26,29 +26,35 @@ import coil.compose.AsyncImage
 import com.dipolar.data.model.*
 import com.dipolar.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EventListScreen(
     events: List<Event>,
-    dateMeetings: List<Event>,
     currentUser: User?,
     selectedInterests: Set<Interest>,
     selectedLanguage: Language?,
+    meetingTypeFilter: Boolean?,
+    hasActiveFilters: Boolean,
     onToggleInterest: (Interest) -> Unit,
     onLanguageFilter: (Language?) -> Unit,
+    onMeetingTypeFilter: (Boolean?) -> Unit,
     onClearFilters: () -> Unit,
     onEventClick: (Event) -> Unit,
     onCreateEvent: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var showDateMeetingsSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
 
-    if (showDateMeetingsSheet) {
-        DateMeetingsBottomSheet(
-            meetings = dateMeetings,
-            currentUser = currentUser,
-            onEventClick = { onEventClick(it); showDateMeetingsSheet = false },
-            onDismiss = { showDateMeetingsSheet = false }
+    if (showFilterSheet) {
+        FilterBottomSheet(
+            selectedInterests = selectedInterests,
+            selectedLanguage = selectedLanguage,
+            meetingTypeFilter = meetingTypeFilter,
+            onToggleInterest = onToggleInterest,
+            onLanguageFilter = onLanguageFilter,
+            onMeetingTypeFilter = onMeetingTypeFilter,
+            onClearFilters = onClearFilters,
+            onDismiss = { showFilterSheet = false }
         )
     }
 
@@ -86,57 +92,86 @@ fun EventListScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            // Search bar
+            // Search + Filtre butonu
             item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Etkinlik, dil veya host ara...", color = TextSecondary, fontSize = 14.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = CardWhite,
-                        focusedContainerColor = CardWhite,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = NavyBlue
-                    ),
-                    singleLine = true
-                )
-            }
-
-            // 1-on-1 Buluşmalar banner
-            item {
-                DateMeetingsBanner(
-                    count = dateMeetings.size,
-                    onClick = { showDateMeetingsSheet = true }
-                )
-            }
-
-            // Language filter
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    Text("DİL", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 1.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            FilterPill("Tümü", selectedLanguage == null) { onLanguageFilter(null) }
-                        }
-                        items(Language.entries) { lang ->
-                            FilterPill("${lang.flag} ${lang.label}", selectedLanguage == lang) { onLanguageFilter(lang) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Etkinlik, dil veya host ara...", color = TextSecondary, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = CardWhite,
+                            focusedContainerColor = CardWhite,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = NavyBlue
+                        ),
+                        singleLine = true
+                    )
+                    // Filtre butonu
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (hasActiveFilters) NavyBlue else CardWhite)
+                            .clickable { showFilterSheet = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BadgedBox(badge = {
+                            if (hasActiveFilters) Badge(containerColor = Color(0xFFFF6B9D)) {}
+                        }) {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = "Filtrele",
+                                tint = if (hasActiveFilters) Color.White else NavyBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     }
                 }
             }
 
-            // Interest filter
-            item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("İLGİ ALANLARI", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 1.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(Interest.entries) { interest ->
-                            FilterPill("${interest.emoji} ${interest.label}", interest in selectedInterests) { onToggleInterest(interest) }
+            // Aktif filtre özeti (var ise)
+            if (hasActiveFilters) {
+                item {
+                    LazyRow(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        meetingTypeFilter?.let {
+                            item {
+                                ActiveFilterChip(
+                                    text = if (it) "💜 1-on-1 Buluşma" else "👥 Grup Etkinliği",
+                                    onRemove = { onMeetingTypeFilter(null) }
+                                )
+                            }
+                        }
+                        selectedLanguage?.let {
+                            item {
+                                ActiveFilterChip(
+                                    text = "${it.flag} ${it.label}",
+                                    onRemove = { onLanguageFilter(null) }
+                                )
+                            }
+                        }
+                        items(selectedInterests.toList()) { interest ->
+                            ActiveFilterChip(
+                                text = "${interest.emoji} ${interest.label}",
+                                onRemove = { onToggleInterest(interest) }
+                            )
+                        }
+                        item {
+                            TextButton(onClick = onClearFilters, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                Text("Tümünü Temizle", color = Color(0xFFE05C7A), fontSize = 12.sp)
+                            }
                         }
                     }
                 }
@@ -149,7 +184,14 @@ fun EventListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Yaklaşan Etkinlikler", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text(
+                        when (meetingTypeFilter) {
+                            true  -> "1-on-1 Buluşmalar"
+                            false -> "Grup Etkinlikleri"
+                            null  -> "Tüm Etkinlikler"
+                        },
+                        fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary
+                    )
                     Text("${events.size}", fontSize = 13.sp, color = TextSecondary)
                 }
             }
@@ -161,73 +203,66 @@ fun EventListScreen(
                         it.language.label.contains(searchQuery, true)
             }
 
-            items(filtered, key = { it.id }) { event ->
-                DiscoverEventCard(event = event, currentUserId = currentUser?.id, onClick = { onEventClick(event) })
-                Spacer(modifier = Modifier.height(12.dp))
+            if (filtered.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.SearchOff, null, tint = TextSecondary, modifier = Modifier.size(48.dp))
+                            Text("Sonuç bulunamadı", color = TextSecondary, fontSize = 15.sp)
+                            TextButton(onClick = onClearFilters) { Text("Filtreleri Temizle", color = NavyBlue) }
+                        }
+                    }
+                }
+            } else {
+                items(filtered, key = { it.id }) { event ->
+                    DiscoverEventCard(event = event, currentUserId = currentUser?.id, onClick = { onEventClick(event) })
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-fun DateMeetingsBanner(count: Int, onClick: () -> Unit) {
-    Box(
+fun ActiveFilterChip(text: String, onRemove: () -> Unit) {
+    Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(NavyBlue)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .background(NavyBlue.copy(alpha = 0.12f))
+            .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Text(text, fontSize = 12.sp, color = NavyBlue, fontWeight = FontWeight.Medium)
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(NavyBlue.copy(alpha = 0.2f))
+                .clickable(onClick = onRemove),
+            contentAlignment = Alignment.Center
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(16.dp))
-                    Text(
-                        "1-on-1 Buluşmalar",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-                }
-                Text(
-                    "$count aktif buluşma fırsatı",
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.75f)
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("Keşfet", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                    Icon(Icons.Default.ArrowForward, null, tint = Color.White, modifier = Modifier.size(14.dp))
-                }
-            }
+            Icon(Icons.Default.Close, null, tint = NavyBlue, modifier = Modifier.size(10.dp))
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DateMeetingsBottomSheet(
-    meetings: List<Event>,
-    currentUser: User?,
-    onEventClick: (Event) -> Unit,
+fun FilterBottomSheet(
+    selectedInterests: Set<Interest>,
+    selectedLanguage: Language?,
+    meetingTypeFilter: Boolean?,
+    onToggleInterest: (Interest) -> Unit,
+    onLanguageFilter: (Language?) -> Unit,
+    onMeetingTypeFilter: (Boolean?) -> Unit,
+    onClearFilters: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
@@ -235,142 +270,108 @@ fun DateMeetingsBottomSheet(
         containerColor = LightBlueBackground,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(20.dp))
-                        Text("1-on-1 Buluşmalar", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    }
-                    Text("${meetings.size} buluşma seni bekliyor", fontSize = 13.sp, color = TextSecondary)
+                Text("Filtrele", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                TextButton(onClick = { onClearFilters(); }) {
+                    Text("Temizle", color = Color(0xFFE05C7A), fontWeight = FontWeight.SemiBold)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Etkinlik Türü
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("ETKİNLİK TÜRÜ", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 1.sp)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Tümü
+                    MeetingTypeCard(
+                        icon = "🌐",
+                        label = "Tümü",
+                        sublabel = "Her etkinlik",
+                        selected = meetingTypeFilter == null,
+                        onClick = { onMeetingTypeFilter(null) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Grup
+                    MeetingTypeCard(
+                        icon = "👥",
+                        label = "Grup",
+                        sublabel = "3+ kişi",
+                        selected = meetingTypeFilter == false,
+                        onClick = { onMeetingTypeFilter(false) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    // 1-on-1
+                    MeetingTypeCard(
+                        icon = "💜",
+                        label = "1-on-1",
+                        sublabel = "Buluşma",
+                        selected = meetingTypeFilter == true,
+                        onClick = { onMeetingTypeFilter(true) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
-            if (meetings.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.FavoriteBorder, null, tint = TextSecondary, modifier = Modifier.size(48.dp))
-                        Text("Şu an buluşma yok", color = TextSecondary)
+            // Dil
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("DİL", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 1.sp)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterPill("🌍 Tümü", selectedLanguage == null) { onLanguageFilter(null) }
+                    Language.entries.forEach { lang ->
+                        FilterPill("${lang.flag} ${lang.label}", selectedLanguage == lang) { onLanguageFilter(lang) }
                     }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.heightIn(max = 600.dp)
-                ) {
-                    items(meetings, key = { it.id }) { meeting ->
-                        DateMeetingCard(
-                            event = meeting,
-                            currentUserId = currentUser?.id,
-                            onClick = { onEventClick(meeting) }
-                        )
+            }
+
+            // İlgi Alanları
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("İLGİ ALANLARI", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 1.sp)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Interest.entries.forEach { interest ->
+                        FilterPill("${interest.emoji} ${interest.label}", interest in selectedInterests) { onToggleInterest(interest) }
                     }
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
+            }
+
+            // Uygula butonu
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
+            ) {
+                Text("Uygula", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }
 }
 
 @Composable
-fun DateMeetingCard(event: Event, currentUserId: String?, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = CardWhite),
-        elevation = CardDefaults.cardElevation(0.dp)
+fun MeetingTypeCard(icon: String, label: String, sublabel: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) NavyBlue else CardWhite)
+            .border(1.dp, if (selected) NavyBlue else Color(0xFFE0E0E0), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AsyncImage(
-                        model = event.creatorAvatarUrl,
-                        contentDescription = null,
-                        modifier = Modifier.size(52.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(TagPink)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text("1-ON-1 BULUŞMA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TagPinkText)
-                        }
-                        Text(event.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Host: ", fontSize = 13.sp, color = TextSecondary)
-                Text(event.creatorName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-            }
-
-            if (event.description.isNotBlank()) {
-                Text(event.description, fontSize = 13.sp, color = TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(14.dp), tint = NavyBlue)
-                    Text(event.date, fontSize = 12.sp, color = TextSecondary)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(14.dp), tint = NavyBlue)
-                    Text(event.location, fontSize = 12.sp, color = TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                event.interests.take(3).forEach { interest ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(LightBlueBackground)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text("${interest.emoji} ${interest.label}", fontSize = 11.sp, color = NavyBlue, fontWeight = FontWeight.Medium)
-                    }
-                }
-            }
-
-            Button(
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(23.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
-            ) {
-                Icon(Icons.Default.Favorite, null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    if (event.creatorId == currentUserId) "Etkinliğimi Gör" else "Buluşmak İstiyorum",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(icon, fontSize = 22.sp)
+            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (selected) Color.White else TextPrimary)
+            Text(sublabel, fontSize = 10.sp, color = if (selected) Color.White.copy(alpha = 0.7f) else TextSecondary)
         }
     }
 }
@@ -383,14 +384,9 @@ fun FilterPill(text: String, selected: Boolean, onClick: () -> Unit) {
             .background(if (selected) NavyBlue else CardWhite)
             .border(1.dp, if (selected) NavyBlue else Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) Color.White else TextSecondary
-        )
+        Text(text, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, color = if (selected) Color.White else TextSecondary)
     }
 }
 
@@ -403,7 +399,7 @@ fun DiscoverEventCard(event: Event, currentUserId: String?, onClick: () -> Unit)
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CardWhite),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -411,7 +407,7 @@ fun DiscoverEventCard(event: Event, currentUserId: String?, onClick: () -> Unit)
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
                     AsyncImage(
                         model = event.creatorAvatarUrl,
                         contentDescription = null,
@@ -419,14 +415,20 @@ fun DiscoverEventCard(event: Event, currentUserId: String?, onClick: () -> Unit)
                         contentScale = ContentScale.Crop
                     )
                     Column {
-                        val tagText = event.interests.firstOrNull()?.let { "${it.emoji} ${it.label.uppercase()}" } ?: "ETKİNLİK"
-                        Box(
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(TagPink).padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(tagText, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TagPinkText)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (event.isDateMeeting) {
+                                Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFFFE4F0)).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                                    Text("💜 1-ON-1", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE05C7A))
+                                }
+                            } else {
+                                val tagText = event.interests.firstOrNull()?.let { "${it.emoji} ${it.label.uppercase()}" } ?: "ETKİNLİK"
+                                Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(TagPink).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                                    Text(tagText, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TagPinkText)
+                                }
+                            }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(event.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(event.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 if (isOwner && pendingCount > 0) {
@@ -435,8 +437,7 @@ fun DiscoverEventCard(event: Event, currentUserId: String?, onClick: () -> Unit)
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Host: ", fontSize = 13.sp, color = TextSecondary)
                 Text(event.creatorName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
@@ -449,14 +450,21 @@ fun DiscoverEventCard(event: Event, currentUserId: String?, onClick: () -> Unit)
                 Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = TextSecondary)
                 Text("${event.language.flag} ${event.language.label}", fontSize = 13.sp, color = TextSecondary)
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onClick,
                 modifier = Modifier.fillMaxWidth().height(46.dp),
                 shape = RoundedCornerShape(23.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
             ) {
-                Text(if (isOwner) "Etkinliğimi Gör" else "Katıl", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    when {
+                        isOwner -> "Etkinliğimi Gör"
+                        event.isDateMeeting -> "Buluşmak İstiyorum"
+                        else -> "Katıl"
+                    },
+                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp
+                )
             }
         }
     }

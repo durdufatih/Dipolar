@@ -22,31 +22,26 @@ class EventViewModel @Inject constructor(
     private val _selectedLanguageFilter = MutableStateFlow<Language?>(null)
     val selectedLanguageFilter: StateFlow<Language?> = _selectedLanguageFilter.asStateFlow()
 
+    // null = hepsi, true = sadece 1-on-1, false = sadece grup
+    private val _meetingTypeFilter = MutableStateFlow<Boolean?>(null)
+    val meetingTypeFilter: StateFlow<Boolean?> = _meetingTypeFilter.asStateFlow()
+
     val filteredEvents: StateFlow<List<Event>> = combine(
         repository.events,
         _selectedInterestFilter,
-        _selectedLanguageFilter
-    ) { events, interestFilter, languageFilter ->
+        _selectedLanguageFilter,
+        _meetingTypeFilter
+    ) { events, interestFilter, languageFilter, meetingType ->
         events.filter { event ->
-            if (event.isDateMeeting) return@filter false
+            val typeMatch = when (meetingType) {
+                true  -> event.isDateMeeting
+                false -> !event.isDateMeeting
+                null  -> true
+            }
             val interestMatch = interestFilter.isEmpty() ||
                     event.interests.any { it in interestFilter }
             val languageMatch = languageFilter == null || event.language == languageFilter
-            interestMatch && languageMatch
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val dateMeetings: StateFlow<List<Event>> = combine(
-        repository.events,
-        _selectedInterestFilter,
-        _selectedLanguageFilter
-    ) { events, interestFilter, languageFilter ->
-        events.filter { event ->
-            if (!event.isDateMeeting) return@filter false
-            val interestMatch = interestFilter.isEmpty() ||
-                    event.interests.any { it in interestFilter }
-            val languageMatch = languageFilter == null || event.language == languageFilter
-            interestMatch && languageMatch
+            typeMatch && interestMatch && languageMatch
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -68,60 +63,52 @@ class EventViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val hasActiveFilters: StateFlow<Boolean> = combine(
+        _selectedInterestFilter, _selectedLanguageFilter, _meetingTypeFilter
+    ) { i, l, m -> i.isNotEmpty() || l != null || m != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun toggleInterestFilter(interest: Interest) {
-        _selectedInterestFilter.update { current ->
-            if (interest in current) current - interest else current + interest
-        }
+        _selectedInterestFilter.update { if (interest in it) it - interest else it + interest }
     }
 
     fun setLanguageFilter(language: Language?) {
         _selectedLanguageFilter.value = language
     }
 
+    fun setMeetingTypeFilter(isDate: Boolean?) {
+        _meetingTypeFilter.value = isDate
+    }
+
     fun clearFilters() {
         _selectedInterestFilter.value = emptySet()
         _selectedLanguageFilter.value = null
+        _meetingTypeFilter.value = null
     }
 
     fun createEvent(
-        title: String,
-        description: String,
-        date: String,
-        location: String,
-        maxParticipants: Int,
-        interests: List<Interest>,
-        language: Language,
+        title: String, description: String, date: String, location: String,
+        maxParticipants: Int, interests: List<Interest>, language: Language,
         isDateMeeting: Boolean = false
     ) {
         val user = repository.currentUser.value ?: return
         viewModelScope.launch {
             repository.createEvent(
-                title = title,
-                description = description,
-                date = date,
-                location = location,
-                maxParticipants = maxParticipants,
-                interests = interests,
-                language = language,
-                isDateMeeting = isDateMeeting,
-                creatorId = user.id,
-                creatorName = user.name,
-                creatorAvatarUrl = user.avatarUrl
+                title = title, description = description, date = date, location = location,
+                maxParticipants = maxParticipants, interests = interests, language = language,
+                isDateMeeting = isDateMeeting, creatorId = user.id,
+                creatorName = user.name, creatorAvatarUrl = user.avatarUrl
             )
         }
     }
 
     fun sendJoinRequest(eventId: String) {
         val user = repository.currentUser.value ?: return
-        viewModelScope.launch {
-            repository.sendJoinRequest(eventId, user)
-        }
+        viewModelScope.launch { repository.sendJoinRequest(eventId, user) }
     }
 
     fun respondToJoinRequest(eventId: String, requestId: String, accept: Boolean) {
-        viewModelScope.launch {
-            repository.respondToJoinRequest(eventId, requestId, accept)
-        }
+        viewModelScope.launch { repository.respondToJoinRequest(eventId, requestId, accept) }
     }
 
     fun getJoinStatus(eventId: String): JoinRequestStatus? {
@@ -129,7 +116,5 @@ class EventViewModel @Inject constructor(
         return repository.getJoinRequestStatus(eventId, userId)
     }
 
-    fun getEventById(eventId: String): Event? {
-        return repository.events.value.find { it.id == eventId }
-    }
+    fun getEventById(eventId: String): Event? = repository.events.value.find { it.id == eventId }
 }
