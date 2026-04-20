@@ -218,8 +218,8 @@ fun MainScreen(
             }
             composable("tab_create") {
                 CreateEventScreen(
-                    onCreateEvent = { title, desc, date, loc, max, interests, lang ->
-                        eventVm.createEvent(title, desc, date, loc, max, interests, lang)
+                    onCreateEvent = { title, desc, date, loc, max, interests, lang, isDate ->
+                        eventVm.createEvent(title, desc, date, loc, max, interests, lang, isDate)
                         bottomNav.navigate("tab_events") {
                             popUpTo(bottomNav.graph.startDestinationId) { saveState = true }
                         }
