@@ -3,7 +3,10 @@ package com.dipolar.navigation
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.*
 import androidx.navigation.compose.*
@@ -12,6 +15,7 @@ import com.dipolar.ui.auth.*
 import com.dipolar.ui.events.*
 import com.dipolar.ui.notifications.NotificationsScreen
 import com.dipolar.ui.profile.*
+import com.dipolar.ui.theme.NavyBlue
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -23,11 +27,14 @@ sealed class Screen(val route: String) {
     object CreateEvent : Screen("create_event")
 }
 
-sealed class BottomTab(val route: String, val label: String) {
-    object Events : BottomTab("tab_events", "Etkinlikler")
-    object Notifications : BottomTab("tab_notifications", "Bildirimler")
-    object Profile : BottomTab("tab_profile", "Profil")
-}
+data class BottomNavItem(val route: String, val label: String, val icon: ImageVector, val iconSelected: ImageVector)
+
+val bottomNavItems = listOf(
+    BottomNavItem("tab_events", "DISCOVER", Icons.Outlined.Explore, Icons.Filled.Explore),
+    BottomNavItem("tab_saved", "SAVED", Icons.Outlined.Bookmark, Icons.Filled.Bookmark),
+    BottomNavItem("tab_create", "CREATE", Icons.Outlined.AddCircle, Icons.Filled.AddCircle),
+    BottomNavItem("tab_profile", "PROFILE", Icons.Outlined.Person, Icons.Filled.Person)
+)
 
 @Composable
 fun DipolarNavHost() {
@@ -82,12 +89,8 @@ fun DipolarNavHost() {
 
         composable(Screen.Main.route) {
             MainScreen(
-                onNavigateToEventDetail = { eventId ->
-                    navController.navigate(Screen.EventDetail.createRoute(eventId))
-                },
-                onNavigateToCreateEvent = {
-                    navController.navigate(Screen.CreateEvent.route)
-                },
+                onNavigateToEventDetail = { navController.navigate(Screen.EventDetail.createRoute(it)) },
+                onNavigateToCreateEvent = { navController.navigate(Screen.CreateEvent.route) },
                 onLogout = {
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
@@ -100,31 +103,29 @@ fun DipolarNavHost() {
         composable(
             Screen.EventDetail.route,
             arguments = listOf(navArgument("eventId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val eventId = backStackEntry.arguments?.getString("eventId") ?: return@composable
-            val eventViewModel: EventViewModel = hiltViewModel()
-            val user by eventViewModel.currentUser.collectAsState()
-            val latestEvents by eventViewModel.filteredEvents.collectAsState()
-            val latestEvent = remember(latestEvents) { eventViewModel.getEventById(eventId) } ?: return@composable
-            val joinStatus = remember(latestEvents) { eventViewModel.getJoinStatus(eventId) }
+        ) { backStack ->
+            val eventId = backStack.arguments?.getString("eventId") ?: return@composable
+            val vm: EventViewModel = hiltViewModel()
+            val user by vm.currentUser.collectAsState()
+            val allEvents by vm.filteredEvents.collectAsState()
+            val event = remember(allEvents) { vm.getEventById(eventId) } ?: return@composable
+            val joinStatus = remember(allEvents) { vm.getJoinStatus(eventId) }
 
             EventDetailScreen(
-                event = latestEvent,
+                event = event,
                 currentUser = user,
                 joinStatus = joinStatus,
-                onJoinRequest = { eventViewModel.sendJoinRequest(eventId) },
-                onRespondToRequest = { requestId, accept ->
-                    eventViewModel.respondToJoinRequest(eventId, requestId, accept)
-                },
+                onJoinRequest = { vm.sendJoinRequest(eventId) },
+                onRespondToRequest = { requestId, accept -> vm.respondToJoinRequest(eventId, requestId, accept) },
                 onBack = { navController.popBackStack() }
             )
         }
 
         composable(Screen.CreateEvent.route) {
-            val eventViewModel: EventViewModel = hiltViewModel()
+            val vm: EventViewModel = hiltViewModel()
             CreateEventScreen(
                 onCreateEvent = { title, desc, date, loc, max, interests, lang ->
-                    eventViewModel.createEvent(title, desc, date, loc, max, interests, lang)
+                    vm.createEvent(title, desc, date, loc, max, interests, lang)
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() }
@@ -139,108 +140,101 @@ fun MainScreen(
     onNavigateToCreateEvent: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val bottomNavController = rememberNavController()
-    val eventViewModel: EventViewModel = hiltViewModel()
-    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val bottomNav = rememberNavController()
+    val eventVm: EventViewModel = hiltViewModel()
+    val profileVm: ProfileViewModel = hiltViewModel()
 
-    val currentUser by eventViewModel.currentUser.collectAsState()
-    val filteredEvents by eventViewModel.filteredEvents.collectAsState()
-    val allEvents by profileViewModel.currentUser.collectAsState()
-    val selectedInterests by eventViewModel.selectedInterestFilter.collectAsState()
-    val selectedLanguage by eventViewModel.selectedLanguageFilter.collectAsState()
-    val pendingCount by eventViewModel.pendingRequestEvents.collectAsState()
+    val currentUser by eventVm.currentUser.collectAsState()
+    val filteredEvents by eventVm.filteredEvents.collectAsState()
+    val myEvents by eventVm.myEvents.collectAsState()
+    val selectedInterests by eventVm.selectedInterestFilter.collectAsState()
+    val selectedLanguage by eventVm.selectedLanguageFilter.collectAsState()
+    val pendingEvents by eventVm.pendingRequestEvents.collectAsState()
 
-    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val entry by bottomNav.currentBackStackEntryAsState()
+    val currentRoute = entry?.destination?.route
+
+    val totalPending = pendingEvents.sumOf { e -> e.joinRequests.count { it.status == JoinRequestStatus.PENDING } }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = currentRoute == BottomTab.Events.route,
-                    onClick = {
-                        bottomNavController.navigate(BottomTab.Events.route) {
-                            popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Icon(Icons.Default.Explore, null) },
-                    label = { Text(BottomTab.Events.label) }
-                )
-                NavigationBarItem(
-                    selected = currentRoute == BottomTab.Notifications.route,
-                    onClick = {
-                        bottomNavController.navigate(BottomTab.Notifications.route) {
-                            popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = {
-                        BadgedBox(badge = {
-                            val count = pendingCount.sumOf { e ->
-                                e.joinRequests.count { it.status == JoinRequestStatus.PENDING }
+            NavigationBar(containerColor = Color.White) {
+                bottomNavItems.forEach { item ->
+                    val selected = currentRoute == item.route
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = {
+                            bottomNav.navigate(item.route) {
+                                popUpTo(bottomNav.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            if (count > 0) Badge { Text(count.toString()) }
-                        }) {
-                            Icon(Icons.Default.Notifications, null)
-                        }
-                    },
-                    label = { Text(BottomTab.Notifications.label) }
-                )
-                NavigationBarItem(
-                    selected = currentRoute == BottomTab.Profile.route,
-                    onClick = {
-                        bottomNavController.navigate(BottomTab.Profile.route) {
-                            popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Icon(Icons.Default.Person, null) },
-                    label = { Text(BottomTab.Profile.label) }
-                )
+                        },
+                        icon = {
+                            BadgedBox(badge = {
+                                if (item.route == "tab_saved" && totalPending > 0)
+                                    Badge { Text(totalPending.toString()) }
+                            }) {
+                                Icon(if (selected) item.iconSelected else item.icon, null)
+                            }
+                        },
+                        label = {
+                            Text(item.label, style = MaterialTheme.typography.labelSmall)
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = NavyBlue,
+                            selectedTextColor = NavyBlue,
+                            indicatorColor = Color.Transparent
+                        )
+                    )
+                }
             }
         }
     ) { padding ->
-        NavHost(
-            navController = bottomNavController,
-            startDestination = BottomTab.Events.route
-        ) {
-            composable(BottomTab.Events.route) {
+        NavHost(navController = bottomNav, startDestination = "tab_events") {
+            composable("tab_events") {
                 EventListScreen(
                     events = filteredEvents,
                     currentUser = currentUser,
                     selectedInterests = selectedInterests,
                     selectedLanguage = selectedLanguage,
-                    onToggleInterest = eventViewModel::toggleInterestFilter,
-                    onLanguageFilter = eventViewModel::setLanguageFilter,
-                    onClearFilters = eventViewModel::clearFilters,
-                    onEventClick = { event -> onNavigateToEventDetail(event.id) },
+                    onToggleInterest = eventVm::toggleInterestFilter,
+                    onLanguageFilter = eventVm::setLanguageFilter,
+                    onClearFilters = eventVm::clearFilters,
+                    onEventClick = { onNavigateToEventDetail(it.id) },
                     onCreateEvent = onNavigateToCreateEvent
                 )
             }
-
-            composable(BottomTab.Notifications.route) {
-                val myEvents by eventViewModel.myEvents.collectAsState()
+            composable("tab_saved") {
                 NotificationsScreen(
                     events = myEvents,
                     currentUserId = currentUser?.id,
                     onRespondToRequest = { eventId, requestId, accept ->
-                        eventViewModel.respondToJoinRequest(eventId, requestId, accept)
+                        eventVm.respondToJoinRequest(eventId, requestId, accept)
                     }
                 )
             }
-
-            composable(BottomTab.Profile.route) {
-                val user by profileViewModel.currentUser.collectAsState()
+            composable("tab_create") {
+                CreateEventScreen(
+                    onCreateEvent = { title, desc, date, loc, max, interests, lang ->
+                        eventVm.createEvent(title, desc, date, loc, max, interests, lang)
+                        bottomNav.navigate("tab_events") {
+                            popUpTo(bottomNav.graph.startDestinationId) { saveState = true }
+                        }
+                    },
+                    onBack = {
+                        bottomNav.navigate("tab_events") {
+                            popUpTo(bottomNav.graph.startDestinationId)
+                        }
+                    }
+                )
+            }
+            composable("tab_profile") {
+                val user by profileVm.currentUser.collectAsState()
                 user?.let { u ->
                     ProfileScreen(
                         user = u,
-                        onSave = { bio, interests, languages ->
-                            profileViewModel.updateProfile(bio, interests, languages)
-                        },
+                        onSave = { bio, interests, languages -> profileVm.updateProfile(bio, interests, languages) },
                         onLogout = onLogout
                     )
                 }

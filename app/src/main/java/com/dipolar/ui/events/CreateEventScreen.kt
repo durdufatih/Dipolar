@@ -1,7 +1,10 @@
 package com.dipolar.ui.events
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -11,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -18,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dipolar.data.model.Interest
 import com.dipolar.data.model.Language
+import com.dipolar.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -28,7 +33,7 @@ fun CreateEventScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var maxParticipants by remember { mutableStateOf("4") }
+    var maxParticipants by remember { mutableStateOf(4) }
     var selectedInterests by remember { mutableStateOf<Set<Interest>>(emptySet()) }
     var selectedLanguage by remember { mutableStateOf(Language.TURKISH) }
     var selectedDate by remember { mutableStateOf("") }
@@ -46,13 +51,13 @@ fun CreateEventScreen(
                     datePickerState.selectedDateMillis?.let { millis ->
                         val d = java.time.Instant.ofEpochMilli(millis)
                             .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                        selectedDate = "${d.year}-${d.monthValue.toString().padStart(2,'0')}-${d.dayOfMonth.toString().padStart(2,'0')}"
+                        selectedDate = "${d.year}-${d.monthValue.toString().padStart(2, '0')}-${d.dayOfMonth.toString().padStart(2, '0')}"
                     }
                     showDatePicker = false
-                }) { Text("Tamam") }
+                }) { Text("Tamam", color = NavyBlue) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("İptal") }
+                TextButton(onClick = { showDatePicker = false }) { Text("İptal", color = TextSecondary) }
             }
         ) {
             DatePicker(state = datePickerState)
@@ -62,197 +67,258 @@ fun CreateEventScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Etkinlik Oluştur", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                        Icon(Icons.Default.ArrowBack, null, tint = TextPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF6C63FF),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
+                title = {},
+                actions = {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(NavyBlue),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBlueBackground)
             )
-        }
+        },
+        containerColor = LightBlueBackground
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                "ETKİNLİK OLUŞTUR",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary,
+                letterSpacing = 1.2.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Yeni Bir\nAn Paylaş",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary,
+                lineHeight = 38.sp
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "Etkinliğinizi topluluğa duyurmak için bilgileri doldurun.",
+                fontSize = 14.sp,
+                color = TextSecondary,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Event Title
+            FormLabel("Etkinlik Başlığı")
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it; errorMessage = "" },
+                placeholder = { Text("Etkinliğinize açık bir isim verin...", color = TextSecondary, fontSize = 14.sp) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = CardWhite,
+                    focusedContainerColor = CardWhite,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = NavyBlue
+                ),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Description
+            FormLabel("Açıklama")
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                placeholder = { Text("Etkinliğinizi tanıtın...", color = TextSecondary, fontSize = 14.sp) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                minLines = 3,
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = CardWhite,
+                    focusedContainerColor = CardWhite,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = NavyBlue
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Date & Location
+            FormLabel("Tarih & Konum")
+            Spacer(modifier = Modifier.height(8.dp))
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Etkinlik Bilgileri", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-
+                Column(modifier = Modifier.padding(4.dp)) {
                     OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it; errorMessage = "" },
-                        label = { Text("Etkinlik Başlığı") },
-                        leadingIcon = { Icon(Icons.Default.Title, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Açıklama") },
-                        leadingIcon = { Icon(Icons.Default.Description, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = location,
-                        onValueChange = { location = it },
-                        label = { Text("Konum") },
-                        leadingIcon = { Icon(Icons.Default.LocationOn, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Tarih & Katılımcı", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-
-                    OutlinedTextField(
-                        value = if (selectedDate.isEmpty()) "" else selectedDate,
+                        value = selectedDate,
                         onValueChange = {},
-                        label = { Text("Tarih Seçin") },
-                        leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                        placeholder = { Text("GÜN SEÇ  gg/aa/yyyy", color = TextSecondary, fontSize = 13.sp) },
                         trailingIcon = {
                             IconButton(onClick = { showDatePicker = true }) {
-                                Icon(Icons.Default.CalendarMonth, null)
+                                Icon(Icons.Default.CalendarMonth, null, tint = NavyBlue)
                             }
                         },
                         readOnly = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        placeholder = { Text("Tarih seçmek için dokunun") }
-                    )
-
-                    OutlinedTextField(
-                        value = maxParticipants,
-                        onValueChange = { if (it.all { c -> c.isDigit() } && it.length <= 2) maxParticipants = it },
-                        label = { Text("Maksimum Katılımcı Sayısı") },
-                        leadingIcon = { Icon(Icons.Default.Group, null) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Konuşma Dili", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-
-                    ExposedDropdownMenuBox(
-                        expanded = showLanguageMenu,
-                        onExpandedChange = { showLanguageMenu = it }
-                    ) {
-                        OutlinedTextField(
-                            value = "${selectedLanguage.flag} ${selectedLanguage.label}",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Dil") },
-                            leadingIcon = { Icon(Icons.Default.Language, null) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showLanguageMenu) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent
                         )
-                        ExposedDropdownMenu(
-                            expanded = showLanguageMenu,
-                            onDismissRequest = { showLanguageMenu = false }
-                        ) {
-                            Language.entries.forEach { lang ->
-                                DropdownMenuItem(
-                                    text = { Text("${lang.flag} ${lang.label}") },
-                                    onClick = { selectedLanguage = lang; showLanguageMenu = false }
-                                )
-                            }
-                        }
+                    )
+                    HorizontalDivider(color = Color(0xFFEEEEEE))
+                    OutlinedTextField(
+                        value = location,
+                        onValueChange = { location = it },
+                        placeholder = { Text("KONUM", color = TextSecondary, fontSize = 13.sp) },
+                        trailingIcon = {
+                            Icon(Icons.Default.LocationOn, null, tint = NavyBlue)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent
+                        ),
+                        singleLine = true
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Language
+            FormLabel("Dil")
+            Spacer(modifier = Modifier.height(8.dp))
+            ExposedDropdownMenuBox(expanded = showLanguageMenu, onExpandedChange = { showLanguageMenu = it }) {
+                OutlinedTextField(
+                    value = "${selectedLanguage.flag} ${selectedLanguage.label}",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        Icon(
+                            if (showLanguageMenu) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            null, tint = TextSecondary
+                        )
+                    },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = CardWhite,
+                        focusedContainerColor = CardWhite,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = NavyBlue
+                    )
+                )
+                ExposedDropdownMenu(expanded = showLanguageMenu, onDismissRequest = { showLanguageMenu = false }) {
+                    Language.entries.forEach { lang ->
+                        DropdownMenuItem(
+                            text = { Text("${lang.flag} ${lang.label}") },
+                            onClick = { selectedLanguage = lang; showLanguageMenu = false }
+                        )
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Capacity
+            FormLabel("Kapasite")
+            Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "İlgi Alanları (${selectedInterests.size} seçildi)",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF6C63FF)
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    IconButton(
+                        onClick = { if (maxParticipants > 2) maxParticipants-- },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(LightBlueBackground)
                     ) {
-                        Interest.entries.forEach { interest ->
-                            val selected = interest in selectedInterests
-                            FilterChip(
-                                selected = selected,
-                                onClick = {
-                                    selectedInterests = if (selected)
-                                        selectedInterests - interest
-                                    else
-                                        selectedInterests + interest
-                                },
-                                label = { Text("${interest.emoji} ${interest.label}") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Color(0xFF6C63FF),
-                                    selectedLabelColor = Color.White
-                                )
-                            )
-                        }
+                        Icon(Icons.Default.Remove, null, tint = NavyBlue)
                     }
+                    Text(
+                        "$maxParticipants",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    IconButton(
+                        onClick = { if (maxParticipants < 50) maxParticipants++ },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(LightBlueBackground)
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = NavyBlue)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Interests
+            FormLabel("İlgi Alanları")
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Interest.entries.forEach { interest ->
+                    val selected = interest in selectedInterests
+                    FilterPill(
+                        text = "${interest.emoji} ${interest.label}",
+                        selected = selected,
+                        onClick = {
+                            selectedInterests = if (selected) selectedInterests - interest else selectedInterests + interest
+                        }
+                    )
                 }
             }
 
             if (errorMessage.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = errorMessage,
-                        color = Color(0xFFD32F2F),
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(errorMessage, color = Color(0xFFE05C7A), fontSize = 13.sp)
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
 
             Button(
                 onClick = {
@@ -261,25 +327,31 @@ fun CreateEventScreen(
                         location.isBlank() -> errorMessage = "Konum gerekli"
                         selectedDate.isEmpty() -> errorMessage = "Lütfen bir tarih seçin"
                         selectedInterests.isEmpty() -> errorMessage = "En az bir ilgi alanı seçin"
-                        else -> {
-                            onCreateEvent(
-                                title, description, selectedDate, location,
-                                maxParticipants.toIntOrNull() ?: 4,
-                                selectedInterests.toList(), selectedLanguage
-                            )
-                        }
+                        else -> onCreateEvent(title, description, selectedDate, location, maxParticipants, selectedInterests.toList(), selectedLanguage)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF))
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
             ) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Etkinlik Oluştur", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Etkinliği Yayınla", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Yayınlayarak topluluk kurallarını kabul etmiş olursunuz.",
+                fontSize = 12.sp,
+                color = TextSecondary,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+@Composable
+private fun FormLabel(text: String) {
+    Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
 }

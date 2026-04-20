@@ -1,5 +1,6 @@
 package com.dipolar.ui.events
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,13 +13,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.dipolar.data.model.*
+import com.dipolar.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -31,273 +35,303 @@ fun EventDetailScreen(
     onBack: () -> Unit
 ) {
     val isOwner = event.creatorId == currentUser?.id
-    val alreadyJoined = event.joinRequests.any {
+    val alreadyAccepted = event.joinRequests.any {
         it.requesterId == currentUser?.id && it.status == JoinRequestStatus.ACCEPTED
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Etkinlik Detayı", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                        Icon(Icons.Default.ArrowBack, null, tint = TextPrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF6C63FF),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
+                title = { Text("Dipolar", fontWeight = FontWeight.ExtraBold, color = NavyBlue) },
+                actions = {
+                    AsyncImage(
+                        model = event.creatorAvatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 12.dp).size(36.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBlueBackground)
             )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F7FF))
-            ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        event.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AsyncImage(
-                            model = event.creatorAvatarUrl,
-                            contentDescription = event.creatorName,
-                            modifier = Modifier.size(36.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Column {
-                            Text(event.creatorName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Text("Organizatör", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        }
-                    }
-
-                    HorizontalDivider()
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        InfoItem(Icons.Default.CalendarMonth, "Tarih", event.date)
-                        InfoItem(Icons.Default.LocationOn, "Konum", event.location)
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        InfoItem(
-                            Icons.Default.People,
-                            "Katılımcı",
-                            "${event.currentParticipants}/${event.maxParticipants}"
-                        )
-                        InfoItem(Icons.Default.Language, "Dil", "${event.language.flag} ${event.language.label}")
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { event.currentParticipants.toFloat() / event.maxParticipants },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = if (event.isFull) Color(0xFFD32F2F) else Color(0xFF6C63FF),
-                        trackColor = Color(0xFFE0E0E0)
-                    )
-                    Text(
-                        if (event.isFull) "Etkinlik dolu!" else "${event.spotsLeft} yer kaldı",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (event.isFull) Color(0xFFD32F2F) else Color.Gray
-                    )
-                }
-            }
-
-            // Description
-            if (event.description.isNotBlank()) {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Açıklama", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-                        Text(event.description, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF444444))
-                    }
-                }
-            }
-
-            // Interests
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("İlgi Alanları", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        event.interests.forEach { interest ->
-                            AssistChip(
-                                onClick = {},
-                                label = { Text("${interest.emoji} ${interest.label}") }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Owner: join requests section
-            if (isOwner) {
-                val pendingRequests = event.joinRequests.filter { it.status == JoinRequestStatus.PENDING }
-                val processedRequests = event.joinRequests.filter { it.status != JoinRequestStatus.PENDING }
-
-                if (pendingRequests.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Notifications, null, tint = Color(0xFFFF8F00), modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "${pendingRequests.size} Katılma İsteği",
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFF8F00)
-                                )
-                            }
-
-                            pendingRequests.forEach { request ->
-                                JoinRequestCard(
-                                    request = request,
-                                    onAccept = { onRespondToRequest(request.id, true) },
-                                    onReject = { onRespondToRequest(request.id, false) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (processedRequests.isNotEmpty()) {
-                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("İşlenen İstekler", fontWeight = FontWeight.Bold, color = Color(0xFF6C63FF))
-                            processedRequests.forEach { request ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+        },
+        bottomBar = {
+            if (!isOwner && currentUser != null) {
+                Surface(shadowElevation = 8.dp, color = LightBlueBackground) {
+                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                        when {
+                            alreadyAccepted -> {
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF388E3C))
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        AsyncImage(
-                                            model = request.requesterAvatarUrl,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(32.dp).clip(CircleShape),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(request.requesterName, style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                    Icon(
-                                        if (request.status == JoinRequestStatus.ACCEPTED) Icons.Default.CheckCircle else Icons.Default.Cancel,
-                                        null,
-                                        tint = if (request.status == JoinRequestStatus.ACCEPTED) Color(0xFF388E3C) else Color(0xFFD32F2F)
-                                    )
+                                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Kabul Edildi", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
+                            joinStatus == JoinRequestStatus.PENDING -> {
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8F00)),
+                                    enabled = false
+                                ) {
+                                    Text("İstek Bekleniyor...", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
+                            joinStatus == JoinRequestStatus.REJECTED -> {
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE05C7A)),
+                                    enabled = false
+                                ) {
+                                    Text("İstek Reddedildi", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
+                            event.isFull -> {
+                                Button(
+                                    onClick = {},
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                    enabled = false
+                                ) {
+                                    Text("Etkinlik Dolu", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                            }
+                            else -> {
+                                Button(
+                                    onClick = onJoinRequest,
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    shape = RoundedCornerShape(28.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
+                                ) {
+                                    Text("Katılma İsteği Gönder", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                 }
                             }
                         }
                     }
                 }
             }
-
-            // Join button for non-owners
-            if (!isOwner && currentUser != null) {
-                when {
-                    alreadyJoined -> {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF388E3C))
-                                Text("Bu etkinliğe katılımınız kabul edildi!", color = Color(0xFF388E3C), fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                    joinStatus == JoinRequestStatus.PENDING -> {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFFFF8F00), strokeWidth = 2.dp)
-                                Text("Katılma isteğiniz bekleniyor...", color = Color(0xFFFF8F00), fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                    joinStatus == JoinRequestStatus.REJECTED -> {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Cancel, null, tint = Color(0xFFD32F2F))
-                                Text("Katılma isteğiniz reddedildi.", color = Color(0xFFD32F2F), fontWeight = FontWeight.Medium)
-                            }
-                        }
-                    }
-                    event.isFull -> {
-                        Button(
-                            onClick = {},
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
-                            enabled = false
-                        ) {
-                            Text("Etkinlik Dolu", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                    }
-                    else -> {
-                        Button(
-                            onClick = onJoinRequest,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF))
-                        ) {
-                            Icon(Icons.Default.PersonAdd, null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Katılmak İstiyorum", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        }
-                    }
+        },
+        containerColor = LightBlueBackground
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(padding)
+        ) {
+            // Cover image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF1B3F8B), Color(0xFF4A6FA5))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = event.creatorAvatarUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.4f
+                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.People, null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(48.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                // Limited access badge
+                if (event.isFull || event.spotsLeft <= 2) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(TagPink)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(TagPinkText))
+                            Text(
+                                "SINIRLI ERİŞİM",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TagPinkText,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                Text(
+                    event.title,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
+                    lineHeight = 32.sp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Host
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = event.creatorAvatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Text("Düzenleyen: ", fontSize = 14.sp, color = TextSecondary)
+                    Text(event.creatorName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = NavyBlue)
+                }
+
+                if (event.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        event.description,
+                        fontSize = 14.sp,
+                        color = TextSecondary,
+                        lineHeight = 22.sp,
+                        maxLines = 3
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Info cards
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InfoCard(icon = Icons.Default.CalendarMonth, label = "TARİH", value = event.date)
+                    InfoCard(icon = Icons.Default.Language, label = "DİL", value = "${event.language.flag} ${event.language.label}")
+                    InfoCard(
+                        icon = Icons.Default.People,
+                        label = "KAPASİTE",
+                        value = "${event.spotsLeft} Yer Kaldı",
+                        valueColor = if (event.isFull) Color(0xFFE05C7A) else TextPrimary
+                    )
+                    InfoCard(icon = Icons.Default.LocationOn, label = "KONUM", value = event.location)
+                }
+
+                // Interest tags
+                Spacer(modifier = Modifier.height(16.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    event.interests.forEach { interest ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(CardWhite)
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("${interest.emoji} ${interest.label}", fontSize = 13.sp, color = TextPrimary)
+                        }
+                    }
+                }
+
+                // Owner: join requests
+                if (isOwner) {
+                    val pending = event.joinRequests.filter { it.status == JoinRequestStatus.PENDING }
+                    if (pending.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text("Katılma İstekleri", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        pending.forEach { req ->
+                            JoinRequestCard(
+                                request = req,
+                                onAccept = { onRespondToRequest(req.id, true) },
+                                onReject = { onRespondToRequest(req.id, false) }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                    val processed = event.joinRequests.filter { it.status != JoinRequestStatus.PENDING }
+                    if (processed.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("İşlenen İstekler", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        processed.forEach { req ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        AsyncImage(
+                                            model = req.requesterAvatarUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(32.dp).clip(CircleShape),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(req.requesterName, fontWeight = FontWeight.Medium)
+                                    }
+                                    Icon(
+                                        if (req.status == JoinRequestStatus.ACCEPTED) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                        null,
+                                        tint = if (req.status == JoinRequestStatus.ACCEPTED) Color(0xFF388E3C) else Color(0xFFE05C7A)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 }
 
 @Composable
-private fun InfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(icon, null, modifier = Modifier.size(16.dp), tint = Color(0xFF6C63FF))
-        Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+private fun InfoCard(icon: ImageVector, label: String, value: String, valueColor: Color = TextPrimary) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = CardLight),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(icon, null, tint = NavyBlue, modifier = Modifier.size(22.dp))
+            Column {
+                Text(label, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary, letterSpacing = 0.8.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(value, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = valueColor)
+            }
         }
     }
 }
@@ -310,46 +344,40 @@ fun JoinRequestCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 AsyncImage(
                     model = request.requesterAvatarUrl,
-                    contentDescription = request.requesterName,
+                    contentDescription = null,
                     modifier = Modifier.size(44.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text(request.requesterName, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
-                    Text("Katılmak istiyor", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text(request.requesterName, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text("Katılmak istiyor", fontSize = 12.sp, color = TextSecondary)
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IconButton(
                     onClick = onReject,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color(0xFFFFEBEE)
-                    )
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFFE4E8))
                 ) {
-                    Icon(Icons.Default.Close, "Reddet", tint = Color(0xFFD32F2F))
+                    Icon(Icons.Default.Close, null, tint = Color(0xFFE05C7A), modifier = Modifier.size(18.dp))
                 }
                 IconButton(
                     onClick = onAccept,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = Color(0xFFE8F5E9)
-                    )
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFE8F5E9))
                 ) {
-                    Icon(Icons.Default.Check, "Kabul Et", tint = Color(0xFF388E3C))
+                    Icon(Icons.Default.Check, null, tint = Color(0xFF388E3C), modifier = Modifier.size(18.dp))
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.dipolar.ui.events
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,8 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.dipolar.data.model.*
+import com.dipolar.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventListScreen(
     events: List<Event>,
@@ -37,168 +39,181 @@ fun EventListScreen(
     onEventClick: (Event) -> Unit,
     onCreateEvent: () -> Unit
 ) {
-    var showLanguageMenu by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Column {
-                        Text("Etkinlikler", fontWeight = FontWeight.Bold)
-                        currentUser?.let {
-                            Text(
-                                "Merhaba, ${it.name.split(" ").first()}!",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
+                navigationIcon = {
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Default.Menu, null, tint = TextPrimary)
                     }
+                },
+                title = {
+                    Text(
+                        "Dipolar",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NavyBlue,
+                        fontSize = 20.sp
+                    )
                 },
                 actions = {
-                    IconButton(onClick = onCreateEvent) {
-                        Icon(Icons.Default.AddCircle, contentDescription = "Etkinlik Oluştur")
+                    currentUser?.let {
+                        AsyncImage(
+                            model = it.avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, NavyBlue.copy(alpha = 0.2f), CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF6C63FF),
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBlueBackground)
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateEvent,
-                containerColor = Color(0xFF6C63FF),
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Etkinlik Oluştur")
-            }
-        }
+        containerColor = LightBlueBackground
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            // Filter section
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F7FF))
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                null,
-                                tint = Color(0xFF6C63FF),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                "Filtrele",
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF6C63FF),
-                                fontSize = 14.sp
-                            )
-                        }
-                        if (selectedInterests.isNotEmpty() || selectedLanguage != null) {
-                            TextButton(onClick = onClearFilters) {
-                                Text("Temizle", fontSize = 12.sp, color = Color(0xFFD32F2F))
-                            }
-                        }
-                    }
+            // Search bar
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Etkinlik, dil veya host ara...", color = TextSecondary, fontSize = 14.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = CardWhite,
+                        focusedContainerColor = CardWhite,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = NavyBlue
+                    ),
+                    singleLine = true
+                )
+            }
 
-                    // Interest filter chips
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(Interest.entries) { interest ->
-                            val selected = interest in selectedInterests
-                            FilterChip(
-                                selected = selected,
-                                onClick = { onToggleInterest(interest) },
-                                label = {
-                                    Text(
-                                        "${interest.emoji} ${interest.label}",
-                                        fontSize = 12.sp
-                                    )
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Color(0xFF6C63FF),
-                                    selectedLabelColor = Color.White
-                                )
+            // Language filter
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Text(
+                        "DİL",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterPill(
+                                text = "Tümü",
+                                selected = selectedLanguage == null,
+                                onClick = { onLanguageFilter(null) }
                             )
                         }
-                    }
-
-                    // Language filter
-                    ExposedDropdownMenuBox(
-                        expanded = showLanguageMenu,
-                        onExpandedChange = { showLanguageMenu = it }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedLanguage?.let { "${it.flag} ${it.label}" } ?: "Tüm Diller",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Dil Filtresi", fontSize = 12.sp) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showLanguageMenu) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            textStyle = MaterialTheme.typography.bodySmall
-                        )
-                        ExposedDropdownMenu(
-                            expanded = showLanguageMenu,
-                            onDismissRequest = { showLanguageMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("🌍 Tüm Diller") },
-                                onClick = { onLanguageFilter(null); showLanguageMenu = false }
+                        items(Language.entries) { lang ->
+                            FilterPill(
+                                text = "${lang.flag} ${lang.label}",
+                                selected = selectedLanguage == lang,
+                                onClick = { onLanguageFilter(lang) }
                             )
-                            Language.entries.forEach { lang ->
-                                DropdownMenuItem(
-                                    text = { Text("${lang.flag} ${lang.label}") },
-                                    onClick = { onLanguageFilter(lang); showLanguageMenu = false }
-                                )
-                            }
                         }
                     }
                 }
             }
 
-            // Results count
-            Text(
-                text = "${events.size} etkinlik bulundu",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-
-            // Event list
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(events, key = { it.id }) { event ->
-                    EventCard(
-                        event = event,
-                        currentUserId = currentUser?.id,
-                        onClick = { onEventClick(event) }
+            // Interest filter
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(
+                        "İLGİ ALANLARI",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary,
+                        letterSpacing = 1.sp
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(Interest.entries) { interest ->
+                            FilterPill(
+                                text = "${interest.emoji} ${interest.label}",
+                                selected = interest in selectedInterests,
+                                onClick = { onToggleInterest(interest) }
+                            )
+                        }
+                    }
                 }
+            }
+
+            // Section title
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Yaklaşan Etkinlikler",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary
+                    )
+                    Text("${events.size}", fontSize = 13.sp, color = TextSecondary)
+                }
+            }
+
+            // Event cards
+            val filtered = if (searchQuery.isBlank()) events
+            else events.filter {
+                it.title.contains(searchQuery, true) ||
+                        it.creatorName.contains(searchQuery, true) ||
+                        it.language.label.contains(searchQuery, true)
+            }
+
+            items(filtered, key = { it.id }) { event ->
+                DiscoverEventCard(
+                    event = event,
+                    currentUserId = currentUser?.id,
+                    onClick = { onEventClick(event) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
 }
 
 @Composable
-fun EventCard(
+fun FilterPill(text: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) NavyBlue else CardWhite)
+            .border(1.dp, if (selected) NavyBlue else Color(0xFFE0E0E0), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) Color.White else TextSecondary
+        )
+    }
+}
+
+@Composable
+fun DiscoverEventCard(
     event: Event,
     currentUserId: String?,
     onClick: () -> Unit
@@ -209,141 +224,95 @@ fun EventCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     AsyncImage(
                         model = event.creatorAvatarUrl,
-                        contentDescription = event.creatorName,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape),
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text(
-                            event.creatorName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                        if (isOwner) {
-                            Text(
-                                "Senin etkinliğin",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF6C63FF)
-                            )
+                        // Interest tag
+                        val tagText = event.interests.firstOrNull()?.let {
+                            "${it.emoji} ${it.label.uppercase()}"
+                        } ?: "ETKİNLİK"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(TagPink)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(tagText, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TagPinkText)
                         }
-                    }
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    SuggestionChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                "${event.language.flag} ${event.language.label}",
-                                fontSize = 11.sp
-                            )
-                        }
-                    )
-                    if (isOwner && pendingCount > 0) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Badge(containerColor = Color(0xFFFF6B6B)) {
-                            Text("$pendingCount istek", color = Color.White)
-                        }
+                        Text(
+                            event.title,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                if (isOwner && pendingCount > 0) {
+                    Badge(containerColor = Color(0xFFE05C7A)) {
+                        Text("$pendingCount", color = Color.White, fontSize = 10.sp)
                     }
                 }
             }
 
-            Text(
-                event.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-            if (event.description.isNotBlank()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("Host: ", fontSize = 13.sp, color = TextSecondary)
+                Text(event.creatorName, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(14.dp), tint = TextSecondary)
+                Text(event.date, fontSize = 13.sp, color = TextSecondary)
+                Text("•", color = TextSecondary, fontSize = 13.sp)
+                Icon(Icons.Default.Language, null, modifier = Modifier.size(14.dp), tint = TextSecondary)
+                Text("${event.language.flag} ${event.language.label}", fontSize = 13.sp, color = TextSecondary)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape = RoundedCornerShape(23.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
+            ) {
                 Text(
-                    event.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    if (isOwner) "Etkinliğimi Gör" else "Katıl",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp
                 )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(event.date, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        event.location,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Interest chips
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    event.interests.take(2).forEach { interest ->
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("${interest.emoji} ${interest.label}", fontSize = 11.sp) }
-                        )
-                    }
-                    if (event.interests.size > 2) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("+${event.interests.size - 2}", fontSize = 11.sp) }
-                        )
-                    }
-                }
-
-                // Participants
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.People,
-                        null,
-                        modifier = Modifier.size(16.dp),
-                        tint = if (event.isFull) Color(0xFFD32F2F) else Color(0xFF388E3C)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        "${event.currentParticipants}/${event.maxParticipants}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (event.isFull) Color(0xFFD32F2F) else Color(0xFF388E3C)
-                    )
-                }
             }
         }
     }

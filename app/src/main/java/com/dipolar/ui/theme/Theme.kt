@@ -1,40 +1,37 @@
 package com.dipolar.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+
+val NavyBlue = Color(0xFF1B3F8B)
+val LightBlueBackground = Color(0xFFEEF2FF)
+val CardWhite = Color(0xFFFFFFFF)
+val CardLight = Color(0xFFF5F6FA)
+val TextPrimary = Color(0xFF1A1A2E)
+val TextSecondary = Color(0xFF6B7280)
+val TagPink = Color(0xFFFFE4E8)
+val TagPinkText = Color(0xFFE05C7A)
+val ChipSelected = Color(0xFF1B3F8B)
+val ChipUnselected = Color(0xFFFFFFFF)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF6C63FF),
+    primary = NavyBlue,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE8E6FF),
-    onPrimaryContainer = Color(0xFF1A0070),
-    secondary = Color(0xFF625B71),
+    primaryContainer = Color(0xFFDDE5FF),
+    onPrimaryContainer = Color(0xFF001257),
+    secondary = Color(0xFF5B6A8A),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE8DEF8),
-    onSecondaryContainer = Color(0xFF1D192B),
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
+    background = LightBlueBackground,
+    surface = CardWhite,
+    onBackground = TextPrimary,
+    onSurface = TextPrimary,
 )
 
 @Composable
-fun DipolarTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !darkTheme) {
-        dynamicLightColorScheme(LocalContext.current)
-    } else {
-        LightColorScheme
-    }
-
+fun DipolarTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = LightColorScheme,
         typography = Typography(),
         content = content
     )
