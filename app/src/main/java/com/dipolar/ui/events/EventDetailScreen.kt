@@ -62,7 +62,11 @@ fun EventDetailScreen(
         bottomBar = {
             if (!isOwner && currentUser != null) {
                 Surface(shadowElevation = 8.dp, color = LightBlueBackground) {
-                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .padding(horizontal = 20.dp, vertical = 16.dp)
+                    ) {
                         when {
                             alreadyAccepted -> {
                                 Button(
