@@ -84,7 +84,10 @@ fun EventDetailScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF8F00)),
                                     enabled = false
                                 ) {
-                                    Text("İstek Bekleniyor...", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Text(
+                                        if (event.isDateMeeting) "Buluşma İsteği Bekleniyor..." else "İstek Bekleniyor...",
+                                        fontWeight = FontWeight.Bold, fontSize = 16.sp
+                                    )
                                 }
                             }
                             joinStatus == JoinRequestStatus.REJECTED -> {
@@ -114,9 +117,15 @@ fun EventDetailScreen(
                                     onClick = onJoinRequest,
                                     modifier = Modifier.fillMaxWidth().height(56.dp),
                                     shape = RoundedCornerShape(28.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = NavyBlue)
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (event.isDateMeeting) Color(0xFFE05C7A) else NavyBlue
+                                    )
                                 ) {
-                                    Text("Katılma İsteği Gönder", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    if (event.isDateMeeting) {
+                                        Text("💜  Buluşmak İstiyorum", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    } else {
+                                        Text("Katılma İsteği Gönder", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
                                 }
                             }
                         }
@@ -161,8 +170,24 @@ fun EventDetailScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                // Limited access badge
-                if (event.isFull || event.spotsLeft <= 2) {
+                // 1-on-1 badge or limited access badge
+                if (event.isDateMeeting) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFFFE4F0))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            "💜 1-ON-1 BULUŞMA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE05C7A),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                } else if (event.isFull || event.spotsLeft <= 2) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -257,11 +282,15 @@ fun EventDetailScreen(
                     val pending = event.joinRequests.filter { it.status == JoinRequestStatus.PENDING }
                     if (pending.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(20.dp))
-                        Text("Katılma İstekleri", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(
+                            if (event.isDateMeeting) "Buluşma İstekleri" else "Katılma İstekleri",
+                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                         pending.forEach { req ->
                             JoinRequestCard(
                                 request = req,
+                                isDateMeeting = event.isDateMeeting,
                                 onAccept = { onRespondToRequest(req.id, true) },
                                 onReject = { onRespondToRequest(req.id, false) }
                             )
@@ -339,6 +368,7 @@ private fun InfoCard(icon: ImageVector, label: String, value: String, valueColor
 @Composable
 fun JoinRequestCard(
     request: JoinRequest,
+    isDateMeeting: Boolean = false,
     onAccept: () -> Unit,
     onReject: () -> Unit
 ) {
@@ -363,7 +393,10 @@ fun JoinRequestCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(request.requesterName, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                    Text("Katılmak istiyor", fontSize = 12.sp, color = TextSecondary)
+                    Text(
+                        if (isDateMeeting) "Buluşmak istiyor" else "Katılmak istiyor",
+                        fontSize = 12.sp, color = TextSecondary
+                    )
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
